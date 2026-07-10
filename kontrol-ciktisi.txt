@@ -1,0 +1,976 @@
+﻿===== features.tsx =====
+import { useI18n } from '../lib/i18n'
+import { useEffect, useRef, useState } from 'react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { ArrowRight, X, CheckCircle2, AlertCircle } from 'lucide-react'
+
+gsap.registerPlugin(ScrollTrigger)
+
+type CardKey = 'borc' | 'abone' | 'kesinti' | 'talep'
+
+const CARDS_TR = [
+  { key: 'borc', n: '01', t: 'BorÃ§ Sorgulama', d: 'Cari ve geÃ§miÅŸ dÃ¶neme ait fatura tutarlarÄ±nÄ±zÄ± gÃ¶rÃ¼ntÃ¼leyin, anÄ±nda Ã¶deyin.', cta: 'SORGULA', tag: 'Hesap 01' },
+  { key: 'abone', n: '02', t: 'Abonelik Durumu', d: 'SÃ¶zleÅŸme bilgileriniz, tarifeniz ve sayaÃ§ endeksiniz bir kart Ã¼zerinde.', cta: 'GÃ–RÃœNTÃœLE', tag: 'Hesap 02' },
+  { key: 'kesinti', n: '03', t: 'PlanlÄ± Kesinti', d: 'BÃ¶lgenizdeki ÅŸebeke bakÄ±mlarÄ± ve tahmini aÃ§Ä±lÄ±ÅŸ zamanlarÄ±.', cta: 'SORGULA', tag: 'Hesap 03' },
+  { key: 'talep', n: '04', t: 'Talep & Ã–neri', d: 'Bir randevu, bir Ã¶neri, bir teÅŸekkÃ¼r â€” bize zarifÃ§e iletin.', cta: 'Ä°LET', tag: 'Hesap 04' },
+] as const
+
+const CARDS_EN = [
+  { key: 'borc', n: '01', t: 'Debt Inquiry', d: 'View your current and past invoices, pay instantly.', cta: 'QUERY', tag: 'Account 01' },
+  { key: 'abone', n: '02', t: 'Subscription Status', d: 'Your contract info, tariff and meter index on one card.', cta: 'VIEW', tag: 'Account 02' },
+  { key: 'kesinti', n: '03', t: 'Planned Outage', d: 'Network maintenance in your area and estimated restoration times.', cta: 'QUERY', tag: 'Account 03' },
+  { key: 'talep', n: '04', t: 'Request & Suggestion', d: 'An appointment, a suggestion, a thank you â€” relay it to us gracefully.', cta: 'SEND', tag: 'Account 04' },
+] as const
+
+const ILCELER = ['Konak', 'KarÅŸÄ±yaka', 'Bornova', 'Buca', 'Ã‡iÄŸli', 'BayraklÄ±', 'Gaziemir', 'NarlÄ±dere', 'BalÃ§ova', 'Menemen']
+
+function reTC(v: string) { return /^[1-9][0-9]{10}$/.test(v) }
+function reHesap(v: string) { return /^[0-9]{10}$/.test(v) }
+function reTel(v: string) { return /^(\+90|0)?5[0-9]{9}$/.test(v.replace(/\s/g, '')) }
+
+function FieldBox({ ok, error, children }: { ok: boolean; error: boolean; children: React.ReactNode }) {
+  return (
+    <div className={`rounded-xl border-2 transition-colors ${error ? 'border-red-500' : ok ? 'border-emerald' : 'border-slate-200'} bg-white focus-within:border-sky-deep`}>
+      {children}
+    </div>
+  )
+}
+
+function PanelBorc({ onClose }: { onClose: () => void }) {
+  const [hesap, setHesap] = useState('')
+  const [tc, setTc] = useState('')
+  const okH = reHesap(hesap), okT = reTC(tc)
+  const err = (hesap && !okH) || (tc && !okT)
+  const valid = okH && okT
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <div className="rounded-3xl bg-gradient-to-br from-navy to-ink p-8 text-white shadow-xl">
+        <p className="font-mono 
+        text-sm uppercase tracking-widest text-sky-soft">â€” Hesap 01</p>
+        <h3 className="mt-3 font-serif text-4xl font-light italic">Fatura <span className="text-sky-soft">sorgulama</span></h3>
+        <p className="mt-4 text-base text-white/75">SÃ¶zleÅŸme hesap numaranÄ±z ve T.C. kimlik numaranÄ±z ile son Ã¼Ã§ fatura dÃ¶neminizi anÄ±nda gÃ¶rÃ¼ntÃ¼leyin.</p>
+        <div className="mt-8 space-y-5">
+          <div>
+            <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-widest text-sky-soft">SÃ–ZLEÅME HESAP NO</label>
+            <input value={hesap} onChange={(e)=>setHesap(e.target.value.replace(/\D/g,'').slice(0,10))}
+              placeholder="10 haneli" className={`w-full border-b-2 bg-transparent py-3 text-lg text-white placeholder-white/40 outline-none transition-colors ${hesap && !okH ? 'border-red-400' : okH ? 'border-emerald-glow' : 'border-white/30 focus:border-sky-soft'}`} />
+          </div>
+          <div>
+            <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-widest text-sky-soft">T.C. KÄ°MLÄ°K NO</label>
+            <input value={tc} onChange={(e)=>setTc(e.target.value.replace(/\D/g,'').slice(0,11))}
+              placeholder="11 haneli" className={`w-full border-b-2 bg-transparent py-3 text-lg text-white placeholder-white/40 outline-none transition-colors ${tc && !okT ? 'border-red-400' : okT ? 'border-emerald-glow' : 'border-white/30 focus:border-sky-soft'}`} />
+          </div>
+        </div>
+        <button disabled={!valid} className={`mt-8 inline-flex items-center gap-2 rounded-xl border-2 px-7 py-4 font-mono text-sm font-bold uppercase tracking-widest transition-all ${valid ? 'border-emerald bg-emerald/20 text-white hover:bg-emerald hover:text-navy' : 'cursor-not-allowed border-white/15 text-white/30'}`}>
+          FaturayÄ± GÃ¶rÃ¼ntÃ¼le <ArrowRight size={16}/>
+        </button>
+        {err && <p className="mt-3 flex items-center gap-2 text-sm text-red-300"><AlertCircle size={14}/> Format hatalÄ±, lÃ¼tfen kontrol edin.</p>}
+        {valid && <p className="mt-3 flex items-center gap-2 text-sm text-emerald-glow"><CheckCircle2 size={14}/> Bilgiler doÄŸrulandÄ±.</p>}
+      </div>
+      <button onClick={onClose} className="self-start rounded-full border-2 border-navy/15 bg-white px-5 py-2.5 text-sm font-bold text-navy hover:border-sky">Kapat Ã—</button>
+    </div>
+  )
+}
+
+function PanelAbone({ onClose }: { onClose: () => void }) {
+  const [il, setIl] = useState(''); const [mah, setMah] = useState(''); const [trk, setTrk] = useState('')
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <div className="rounded-3xl border-2 border-slate-200 bg-white p-8 shadow-xl">
+        <p className="font-mono text-sm uppercase tracking-widest text-sky-deep">â€” Hesap 02</p>
+        <h3 className="mt-3 font-serif text-4xl font-light italic text-navy">SokaÄŸÄ±mda gaz <span className="text-emerald">var mÄ±?</span></h3>
+        <div className="mt-8 grid gap-5 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-widest text-slate">Ä°LÃ‡E</label>
+            <select value={il} onChange={(e)=>{setIl(e.target.value); setMah('')}} className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-base text-navy focus:border-sky-deep focus:outline-none">
+              <option value="">Ä°lÃ§e seÃ§iniz</option>
+              {ILCELER.map(i=><option key={i}>{i}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-widest text-slate">MAHALLE</label>
+            <select value={mah} onChange={(e)=>setMah(e.target.value)} disabled={!il} className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-base text-navy focus:border-sky-deep focus:outline-none disabled:opacity-50">
+              <option value="">{il ? 'Mahalle seÃ§iniz' : 'Ã–nce ilÃ§e seÃ§iniz'}</option>
+              {il && ['Merkez','AtatÃ¼rk','Cumhuriyet','Yeni'].map(m=><option key={m}>{m} Mah.</option>)}
+            </select>
+          </div>
+        </div>
+        {mah && <p className="mt-6 flex items-center gap-2 rounded-xl bg-emerald/10 px-4 py-3 text-base font-semibold text-emerald"><CheckCircle2 size={18}/> {mah}, {il} â€” Gaz hizmeti aktif.</p>}
+      </div>
+      <div className="rounded-3xl bg-gradient-to-br from-navy to-ink p-8 text-white shadow-xl">
+        <p className="font-mono text-sm uppercase tracking-widest text-sky-soft">â€” Hesap 03</p>
+        <h3 className="mt-3 font-serif text-3xl font-light italic">BaÅŸvuru takibi</h3>
+        <div className="mt-6 flex gap-3">
+          <input value={trk} onChange={(e)=>setTrk(e.target.value.toUpperCase())} placeholder="MÃœR-2026-XXXXXX" className="flex-1 rounded-xl border-2 border-white/20 bg-white/5 px-4 py-3 text-base text-white placeholder-white/40 outline-none focus:border-sky-soft"/>
+          <button className="rounded-xl bg-sky px-6 py-3 font-mono text-sm font-bold uppercase tracking-widest text-navy hover:bg-sky-glow">Sorgula â†’</button>
+        </div>
+        {trk.length > 5 && (
+          <div className="mt-6 space-y-2">
+            {['BaÅŸvuru alÄ±ndÄ±','KeÅŸif planlandÄ±','SÃ¶zleÅŸme onayÄ±','Aktivasyon'].map((s,i)=>(
+              <div key={s} className="flex items-center gap-3">
+                <div className={`h-3 flex-1 rounded-full ${i<2?'bg-emerald':'bg-white/15'}`}/>
+                <span className="w-32 text-xs text-white/70">{s}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <button onClick={onClose} className="mt-6 text-sm text-white/60 hover:text-white">Kapat Ã—</button>
+      </div>
+    </div>
+  )
+}
+
+function PanelKesinti({ onClose }: { onClose: () => void }) {
+  const [active, setActive] = useState<string | null>(null)
+  const cuts: Record<string, string> = { Konak: 'BakÄ±m yok', Bornova: '14:00 â€” 17:00 (YarÄ±n)', Buca: 'BakÄ±m yok', Ã‡iÄŸli: '09:00 â€” 12:00 (BugÃ¼n)', KarÅŸÄ±yaka: 'BakÄ±m yok', BayraklÄ±: 'BakÄ±m yok' }
+  return (
+    <div className="rounded-3xl border-2 border-slate-200 bg-white p-8 shadow-xl">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-sm uppercase tracking-widest text-sky-deep">â€” PlanlÄ± Kesinti</p>
+          <h3 className="mt-2 font-serif text-3xl font-light italic text-navy">CanlÄ± kesinti <span className="text-emerald">haritasÄ±</span></h3>
+        </div>
+        <button onClick={onClose} className="rounded-full p-2 text-slate hover:bg-mist"><X size={18}/></button>
+      </div>
+      <div className="mt-6 grid gap-3 md:grid-cols-3">
+        {Object.entries(cuts).map(([ilce, info])=>{
+          const bakim = info !== 'BakÄ±m yok'
+          return (
+            <button key={ilce} onClick={()=>setActive(ilce)} className={`rounded-2xl border-2 p-5 text-left transition-all ${active===ilce?'border-sky-deep bg-sky/10':'border-slate-200 bg-white hover:border-sky/40'}`}>
+              <div className="flex items-center justify-between">
+                <span className="text-lg font-bold text-navy">{ilce}</span>
+                <span className={`h-3 w-3 rounded-full ${bakim?'bg-amber-500 pulse-dot':'bg-emerald'}`}/>
+              </div>
+              <p className={`mt-2 text-sm font-semibold ${bakim?'text-amber-600':'text-emerald'}`}>{info}</p>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function PanelTalep({ onClose }: { onClose: () => void }) {
+  const [tel, setTel] = useState(''); const [msg, setMsg] = useState(''); const okTel = reTel(tel)
+  return (
+    <div className="rounded-3xl border-2 border-slate-200 bg-white p-8 shadow-xl">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-sm uppercase tracking-widest text-sky-deep">â€” Talep & Ã–neri</p>
+          <h3 className="mt-2 font-serif text-3xl font-light italic text-navy">Bizimle <span className="text-emerald">iletiÅŸime geÃ§</span></h3>
+        </div>
+        <button onClick={onClose} className="rounded-full p-2 text-slate hover:bg-mist"><X size={18}/></button>
+      </div>
+      <div className="mt-6 grid gap-5 md:grid-cols-2">
+        <div>
+          <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-widest text-slate">TELEFON</label>
+          <input value={tel} onChange={(e)=>setTel(e.target.value)} placeholder="+90 5xx xxx xx xx"
+            className={`w-full rounded-xl border-2 px-4 py-3 text-base outline-none ${tel && !okTel ? 'border-red-500' : okTel ? 'border-emerald' : 'border-slate-200 focus:border-sky-deep'}`}/>
+        </div>
+        <div>
+          <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-widest text-slate">KONU</label>
+          <select className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-base focus:border-sky-deep focus:outline-none">
+            <option>Åikayet</option><option>Ã–neri</option><option>TeÅŸekkÃ¼r</option><option>Randevu Talebi</option>
+          </select>
+        </div>
+        <div className="md:col-span-2">
+          <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-widest text-slate">MESAJINIZ</label>
+          <textarea value={msg} onChange={(e)=>setMsg(e.target.value)} rows={4} className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-base focus:border-sky-deep focus:outline-none"/>
+        </div>
+      </div>
+      <button disabled={!okTel || !msg} className={`mt-6 rounded-xl px-7 py-3.5 font-mono text-sm font-bold uppercase tracking-widest transition-all ${okTel && msg ? 'bg-emerald text-white hover:bg-emerald-glow' : 'cursor-not-allowed bg-slate-200 text-slate'}`}>GÃ¶nder â†’</button>
+    </div>
+  )
+}
+
+export function Features() {
+  const root = useRef<HTMLElement>(null)
+  const [open, setOpen] = useState<CardKey | null>(null)
+  const { lang } = useI18n()
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from('[data-card]', { y: 50, opacity: 0, duration: 0.9, ease: 'power3.out', stagger: 0.12, scrollTrigger: { trigger: root.current, start: 'top 75%' } })
+    }, root)
+    return () => ctx.revert()
+  }, [])
+
+  return (
+    <section ref={root} id="features" className="relative w-full px-6 py-24 md:px-12 md:py-32 lg:px-16">
+      <div className="mx-auto mb-14 flex w-full max-w-[1600px] flex-wrap items-end justify-between gap-8">
+        <h2 className="max-w-2xl font-heading text-5xl font-bold leading-tight tracking-tight text-navy md:text-6xl">
+          {lang === 'en' ? <>Four essential <span className="font-serif italic text-emerald">actions</span>,<br/>one workshop.</> : <>DÃ¶rt temel <span className="font-serif italic text-emerald">iÅŸlem</span>,<br/>tek bir atÃ¶lye.</>}
+        </h2>
+        <p className="max-w-md text-lg leading-relaxed text-slate">
+{lang === 'en' ? 'From subscription to billing, from outage queries to requests â€” your daily needs as clear as a watch crystal.' : 'AboneliÄŸinizi aÃ§maktan fatura Ã¶demeye, kesinti sorgulamasÄ±ndan talep iletmeye â€” gÃ¼nlÃ¼k ihtiyaÃ§larÄ±nÄ±z bir saat camÄ± kadar berrak.'}
+        </p>
+      </div>
+
+      <div className="mx-auto grid w-full max-w-[1600px] auto-rows-fr items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {(lang === 'en' ? CARDS_EN : CARDS_TR).map((c) => (
+          <button
+            key={c.key}
+            data-card
+            onClick={() => setOpen(c.key)}
+            className="card-hover group flex h-full min-h-[360px] w-full flex-col rounded-3xl border-2 border-slate-200 bg-white p-8 text-left shadow-lg shadow-sky-deep/5"
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-sm font-bold text-emerald">{c.n}</span>
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-emerald/40 text-emerald transition-colors group-hover:border-emerald group-hover:bg-emerald group-hover:text-white">
+                <ArrowRight size={20}/>
+              </span>
+            </div>
+            <h3 className="mt-10 font-serif text-3xl font-light text-navy lg:text-4xl">{c.t}</h3>
+            <p className="mt-4 flex-1 text-base leading-relaxed text-slate lg:text-lg">{c.d}</p>
+            <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-4">
+              <span className="font-mono text-xs font-bold uppercase tracking-widest text-navy">{c.cta}</span>
+              <span className="font-serif text-sm italic text-slate">{c.tag}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+
+
+      {open && (
+        <div className="mt-10">
+          {open === 'borc' && <PanelBorc onClose={()=>setOpen(null)}/>}
+          {open === 'abone' && <PanelAbone onClose={()=>setOpen(null)}/>}
+          {open === 'kesinti' && <PanelKesinti onClose={()=>setOpen(null)}/>}
+          {open === 'talep' && <PanelTalep onClose={()=>setOpen(null)}/>}
+        </div>
+      )}
+    </section>
+  )
+}
+
+
+===== philosophy.tsx =====
+import { useI18n } from '../lib/i18n'
+// src/components/philosophy.tsx
+import { useEffect, useRef, useState } from 'react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { api, type Settings } from '../lib/api'
+
+gsap.registerPlugin(ScrollTrigger)
+
+export function Philosophy() {
+  const { lang } = useI18n()
+  const root = useRef<HTMLElement>(null)
+  const [settings, setSettings] = useState<Settings>({})
+
+  useEffect(() => {
+    api.getSettings().then(setSettings).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from('[data-line]', { y: 30, opacity: 0, duration: 1, ease: 'power3.out', stagger: 0.12,
+        scrollTrigger: { trigger: root.current, start: 'top 70%' } })
+    }, root)
+    return () => ctx.revert()
+  }, [])
+
+  const label = lang === 'en' ? (settings['philosophy_label_en'] || 'Corporate Manifesto') : (settings['philosophy_label'] || 'Kurumsal Manifesto')
+  const pre = lang === 'en' ? (settings['philosophy_pre_en'] || 'Most energy companies prioritize: speed.') : (settings['philosophy_pre'] || 'Ã‡oÄŸu enerji ÅŸirketi Ã¶nceliÄŸi ÅŸuna verir: hÄ±z.')
+  const title = lang === 'en' ? (settings['philosophy_title_en'] || 'We prioritize: safety and transparency.') : (settings['philosophy_title'] || 'Biz Ã¶nceliÄŸi ÅŸuna veriyoruz: gÃ¼venlik ve ÅŸeffaflÄ±k.')
+
+  return (
+    <section ref={root} id="philosophy" className="relative overflow-hidden bg-gradient-to-br from-mist via-white to-sky-soft/30 py-28 md:py-40">
+      <svg aria-hidden viewBox="0 0 800 600" className="pointer-events-none absolute inset-0 h-full w-full opacity-30">
+        <defs>
+          <radialGradient id="ph-g" cx="50%" cy="50%">
+            <stop offset="0%" stopColor="#5ac4e6" stopOpacity=".6" />
+            <stop offset="100%" stopColor="#5ac4e6" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <circle cx="200" cy="200" r="180" fill="url(#ph-g)" />
+        <circle cx="600" cy="400" r="220" fill="url(#ph-g)" />
+      </svg>
+      <div className="relative z-10 mx-auto max-w-4xl px-6 text-center">
+        <span data-line className="font-mono text-sm font-bold uppercase tracking-widest text-sky-deep">{label}</span>
+        <p data-line className="mt-8 text-xl font-light leading-relaxed text-slate md:text-2xl">{pre}</p>
+        <h2 data-line className="mt-5 text-balance font-serif text-5xl font-light italic leading-[1.1] text-navy md:text-6xl">
+          {title}
+        </h2>
+      </div>
+    </section>
+  )
+}
+
+
+===== protocol.tsx =====
+import { useI18n } from '../lib/i18n'
+import { useState } from 'react'
+import { ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react'
+
+const TABS_TR = ['Yeni Abonelik', 'SÃ¶zleÅŸme Yenileme', 'Ä°ptal', 'Åehit/Gazi/Engelli']
+const TABS_EN = ['New Subscription', 'Contract Renewal', 'Cancellation', 'Martyr/Veteran/Disabled']
+
+const STEPS_BY_TAB_EN: Record<number, { n: number; title: string; sub: string; desc: string; docs: string[] }[]> = {
+  0: [
+    { n: 1, title: 'Application', sub: 'New Subscription', desc: 'Share your ID and service address. Approved documents are accepted digitally.', docs: ['National ID copy', 'Title deed / rental contract', 'Phone verification'] },
+    { n: 2, title: 'Survey & Design', sub: 'Field Work', desc: 'Our authorized team surveys your address and completes the project design.', docs: ['Address eligibility report', 'Piping project drawing', 'Cost estimate'] },
+    { n: 3, title: 'Contract', sub: 'Official Approval', desc: 'Natural gas service agreement is signed and security deposit is collected.', docs: ['Contract signature', 'Security deposit', 'GDPR consent'] },
+    { n: 4, title: 'Interior Piping', sub: 'Certified Company', desc: 'Authorized company installs interior piping and performs leak tests.', docs: ['Pipe installation', 'Leak test', 'Chimney check'] },
+    { n: 5, title: 'Meter & Activation', sub: 'Commissioning', desc: 'Your meter is installed, system is pressurized and natural gas supply starts.', docs: ['Meter installation', 'Pressure test', 'First activation'] },
+    { n: 6, title: 'Service Active', sub: 'Congratulations', desc: 'Your natural gas service is active. 24/7 support: 187', docs: ['User manual', 'Emergency: 187', 'Mobile app'] },
+  ],
+  1: [
+    { n: 1, title: 'Authentication', sub: 'Contract Renewal', desc: 'Log in with your contract number and ID.', docs: ['Contract number', 'National ID', 'SMS verification'] },
+    { n: 2, title: 'Current Contract', sub: 'Info Review', desc: 'Review your active contract information and note any changes needed.', docs: ['Tariff selection', 'Address confirmation', 'Contact info'] },
+    { n: 3, title: 'Updated Documents', sub: 'Document Upload', desc: 'Upload your current residence / title deed document.', docs: ['Title deed / rental', 'Residence proof', 'Previous contract'] },
+    { n: 4, title: 'Approval', sub: 'Digital Signature', desc: 'Approve the new term contract conditions.', docs: ['GDPR consent', 'Contract read', 'Digital signature'] },
+    { n: 5, title: 'Processing', sub: 'System Update', desc: 'Your contract renewal is being processed in the system.', docs: ['System update', 'Email notification', 'SMS confirmation'] },
+    { n: 6, title: 'Renewal Complete', sub: 'Active', desc: 'Contract renewal complete. Service continues without interruption.', docs: ['New contract PDF', 'Mobile notification', 'Customer line: 187'] },
+  ],
+  2: [
+    { n: 1, title: 'Cancellation Request', sub: 'Contract Cancellation', desc: 'Enter the contract number you wish to cancel.', docs: ['Contract number', 'National ID', 'Cancellation reason'] },
+    { n: 2, title: 'Meter Reading', sub: 'Final Reading', desc: 'Report your last meter reading or book a technical team appointment.', docs: ['Meter photo', 'Reading value', 'Appointment date'] },
+    { n: 3, title: 'Settlement', sub: 'Final Invoice', desc: 'Your final invoice is calculated and security deposit refund is initiated.', docs: ['Final invoice', 'Refund amount', 'Bank details'] },
+    { n: 4, title: 'Disconnection', sub: 'Meter Removal', desc: 'Technical team removes the meter and disconnects the service.', docs: ['Disconnection report', 'Meter seal', 'Technical signature'] },
+    { n: 5, title: 'Refund', sub: 'Deposit Return', desc: 'Security deposit is transferred to your account within 5 business days.', docs: ['IBAN verification', 'Transfer date', 'Receipt'] },
+    { n: 6, title: 'Cancellation Complete', sub: 'Done', desc: 'Your contract has been cancelled. Reapplication is always possible.', docs: ['Cancellation PDF', 'Refund notification', 'Reapplication'] },
+  ],
+  3: [
+    { n: 1, title: 'Application', sub: 'Special Subscription', desc: 'Share your veteran / disabled certificate and ID.', docs: ['Certificate', 'National ID', 'Phone verification'] },
+    { n: 2, title: 'Verification', sub: 'Document Review', desc: 'Our team verifies your documents and determines the special tariff.', docs: ['Certificate verification', 'Tariff determination', 'Address check'] },
+    { n: 3, title: 'Survey', sub: 'Field Work', desc: 'Our authorized team surveys your address.', docs: ['Address eligibility', 'Technical report', 'Project'] },
+    { n: 4, title: 'Contract', sub: 'Special Terms', desc: 'Sign your special terms contract digitally.', docs: ['GDPR consent', 'Contract', 'Digital signature'] },
+    { n: 5, title: 'Activation', sub: 'Meter & Gas', desc: 'Meter installation and gas activation.', docs: ['Meter installation', 'Pressure test', 'First activation'] },
+    { n: 6, title: 'Service Active', sub: 'Congratulations', desc: 'Your discounted service has started. Support: 187', docs: ['Service active', 'Special support line', 'Mobile app'] },
+  ],
+}
+
+const STEPS_BY_TAB: Record<number, { n: number; title: string; sub: string; desc: string; docs: string[] }[]> = {
+  0: [
+    { n: 1, title: 'BaÅŸvuru', sub: 'Yeni Abonelik', desc: 'Kimlik ve hizmet adresinizi bizimle paylaÅŸÄ±n. OnaylÄ± belgeleriniz dijital olarak kabul edilir.', docs: ['T.C. kimlik fotokopisi', 'Ä°skan / tapu / kira sÃ¶zleÅŸmesi', 'Telefon doÄŸrulamasÄ±'] },
+    { n: 2, title: 'KeÅŸif & Proje', sub: 'Saha Ã‡alÄ±ÅŸmasÄ±', desc: 'Yetkili ekibimiz adresinizde keÅŸif yapar, projelendirme tamamlanÄ±r.', docs: ['Adres uygunluk raporu', 'Tesisat proje Ã§izimi', 'Maliyet teklifi'] },
+    { n: 3, title: 'SÃ¶zleÅŸme', sub: 'Resmi Onay', desc: 'DoÄŸal gaz hizmet sÃ¶zleÅŸmesi imzalanÄ±r, gÃ¼vence bedeli alÄ±nÄ±r.', docs: ['SÃ¶zleÅŸme imzasÄ±', 'GÃ¼vence bedeli', 'KVKK onayÄ±'] },
+    { n: 4, title: 'Ä°Ã§ Tesisat', sub: 'SertifikalÄ± Firma', desc: 'Yetkili firma iÃ§ tesisat dÃ¶ÅŸemesini yapar, sÄ±zdÄ±rmazlÄ±k testleri uygulanÄ±r.', docs: ['Boru dÃ¶ÅŸeme', 'SÄ±zdÄ±rmazlÄ±k testi', 'Baca kontrolÃ¼'] },
+    { n: 5, title: 'SayaÃ§ & AÃ§ma', sub: 'Devreye Alma', desc: 'SayacÄ±nÄ±z takÄ±lÄ±r, sistem basÄ±nÃ§landÄ±rÄ±lÄ±r ve doÄŸal gaz arzÄ± baÅŸlatÄ±lÄ±r.', docs: ['SayaÃ§ montajÄ±', 'BasÄ±nÃ§ testi', 'Ä°lk aÃ§ma'] },
+    { n: 6, title: 'Hizmet Aktif', sub: 'Tebrikler', desc: 'DoÄŸal gaz hizmetiniz aktif. 7/24 destek hattÄ±mÄ±z: 187', docs: ['KullanÄ±m kÄ±lavuzu', 'Acil hat: 187', 'Mobil uygulama'] },
+  ],
+  1: [
+    { n: 1, title: 'Kimlik DoÄŸrulama', sub: 'SÃ¶zleÅŸme Yenileme', desc: 'Mevcut sÃ¶zleÅŸme numaranÄ±z ve T.C. kimliÄŸiniz ile sisteme giriÅŸ yapÄ±n.', docs: ['SÃ¶zleÅŸme numarasÄ±', 'T.C. kimlik', 'SMS doÄŸrulama'] },
+    { n: 2, title: 'Mevcut SÃ¶zleÅŸme', sub: 'Bilgi KontrolÃ¼', desc: 'Aktif sÃ¶zleÅŸme bilgilerinizi gÃ¶zden geÃ§irin, deÄŸiÅŸiklik gerekiyorsa belirtin.', docs: ['Tarife seÃ§imi', 'Adres teyidi', 'Ä°letiÅŸim bilgileri'] },
+    { n: 3, title: 'GÃ¼ncel Belgeler', sub: 'Evrak YÃ¼kleme', desc: 'GÃ¼ncel ikametgah / tapu belgenizi yÃ¼kleyin.', docs: ['Tapu/kira belgesi', 'Ä°kametgah', 'Ã–nceki sÃ¶zleÅŸme'] },
+    { n: 4, title: 'Onay', sub: 'Dijital Ä°mza', desc: 'Yeni dÃ¶nem sÃ¶zleÅŸme ÅŸartlarÄ±nÄ± onaylayÄ±n.', docs: ['KVKK onayÄ±', 'SÃ¶zleÅŸme okundu', 'Dijital imza'] },
+    { n: 5, title: 'Ã–deme', sub: 'GÃ¼vence Bedeli', desc: 'Varsa gÃ¼ncel gÃ¼vence bedeli farkÄ±nÄ± Ã¶deyin.', docs: ['Kart ile Ã¶deme', 'Havale/EFT', 'Fatura tercihi'] },
+    { n: 6, title: 'Yenileme Tamam', sub: 'Aktif', desc: 'SÃ¶zleÅŸme yenilemeniz tamamlandÄ±. Hizmet kesintisiz devam ediyor.', docs: ['Yeni sÃ¶zleÅŸme PDF', 'Mobil bildirim', 'MÃ¼ÅŸteri hattÄ±: 187'] },
+  ],
+  2: [
+    { n: 1, title: 'Ä°ptal Talebi', sub: 'SÃ¶zleÅŸme Ä°ptali', desc: 'Ä°ptal etmek istediÄŸiniz sÃ¶zleÅŸme numarasÄ±nÄ± girin.', docs: ['SÃ¶zleÅŸme numarasÄ±', 'T.C. kimlik', 'Ä°ptal sebebi'] },
+    { n: 2, title: 'SayaÃ§ Endeksi', sub: 'Son Okuma', desc: 'Son sayaÃ§ endeksinizi bildirin veya teknik ekip randevusu alÄ±n.', docs: ['SayaÃ§ fotoÄŸrafÄ±', 'Endeks deÄŸeri', 'Randevu tarihi'] },
+    { n: 3, title: 'Son Fatura', sub: 'Hesap Kapama', desc: 'AÃ§Ä±k bakiyenizi gÃ¶rÃ¼ntÃ¼leyin ve Ã¶deyin.', docs: ['AÃ§Ä±k fatura', 'Son tÃ¼ketim', 'Ã–deme'] },
+    { n: 4, title: 'Gaz Kesimi', sub: 'Teknik Ziyaret', desc: 'Yetkili ekip adresinizde gaz kesim iÅŸlemini gerÃ§ekleÅŸtirir.', docs: ['Randevu', 'MÃ¼hÃ¼rleme', 'Tutanak'] },
+    { n: 5, title: 'GÃ¼vence Ä°adesi', sub: 'IBAN', desc: 'GÃ¼vence bedeli iadesi iÃ§in IBAN bilgilerinizi girin.', docs: ['IBAN', 'Ad/Soyad eÅŸleÅŸmesi', 'Onay'] },
+    { n: 6, title: 'Ä°ptal Tamam', sub: 'SonlandÄ±', desc: 'SÃ¶zleÅŸmeniz iptal edildi. Tekrar baÅŸvuru her zaman mÃ¼mkÃ¼n.', docs: ['Ä°ptal belgesi PDF', 'Ä°ade bildirimi', 'Tekrar baÅŸvuru'] },
+  ],
+  3: [
+    { n: 1, title: 'StatÃ¼ BeyanÄ±', sub: 'Åehit/Gazi/Engelli', desc: 'Hak sahipliÄŸi durumunuzu seÃ§in (Åehit yakÄ±nÄ± / Gazi / Engelli).', docs: ['StatÃ¼ seÃ§imi', 'T.C. kimlik', 'Ä°letiÅŸim'] },
+    { n: 2, title: 'Resmi Belgeler', sub: 'DoÄŸrulama', desc: 'Ä°lgili kuruma ait resmi belgenizi yÃ¼kleyin.', docs: ['SGK / AÃ‡SHB belgesi', 'Engelli saÄŸlÄ±k kurulu raporu', 'Åehitlik belgesi'] },
+    { n: 3, title: 'Ä°ndirim Tarifesi', sub: 'Ã–zel Tarife', desc: 'Hak sahipliÄŸinize uygun indirimli tarife otomatik atanÄ±r.', docs: ['Tarife karÅŸÄ±laÅŸtÄ±rma', 'EPDK onayÄ±', 'Geriye dÃ¶nÃ¼k hak'] },
+    { n: 4, title: 'SÃ¶zleÅŸme', sub: 'Ã–zel Åartlar', desc: 'Ã–zel ÅŸartlÄ± sÃ¶zleÅŸmenizi dijital olarak imzalayÄ±n.', docs: ['KVKK onayÄ±', 'SÃ¶zleÅŸme', 'Dijital imza'] },
+    { n: 5, title: 'Kurulum', sub: 'Ã–ncelikli', desc: 'Ã–ncelikli kurulum sÄ±rasÄ±na alÄ±nÄ±rsÄ±nÄ±z.', docs: ['Randevu', 'Saha ekibi', 'HÄ±zlÄ± aktivasyon'] },
+    { n: 6, title: 'Hizmet Aktif', sub: 'Tebrikler', desc: 'Ä°ndirimli hizmetiniz baÅŸladÄ±. Destek hattÄ±: 187', docs: ['Hizmet aktif', 'Ã–zel destek hattÄ±', 'Mobil uygulama'] },
+  ],
+}
+
+function reTC(v: string) { return /^[1-9][0-9]{10}$/.test(v) }
+function reTel(v: string) { return /^(\+90|0)?5[0-9]{9}$/.test(v.replace(/\s/g, '')) }
+
+export function Protocol() {
+  const { lang } = useI18n()
+  const [tab, setTab] = useState(0)
+  const [step, setStep] = useState(1)
+  const [tel, setTel] = useState('')
+  const [tc, setTc] = useState('')
+  const [tip, setTip] = useState('MÃ¼lk Sahibi')
+  const [adres, setAdres] = useState('')
+  const okTel = reTel(tel); const okTc = reTC(tc)
+
+  const STEPS = (lang === 'en' ? STEPS_BY_TAB_EN : STEPS_BY_TAB)[tab]; const cur = STEPS[step - 1]
+  const valid = okTel && okTc && adres.length > 5
+
+  return (
+    <section id="protocol" className="bg-mist py-24 md:py-32">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="text-center">
+          <p className="font-mono text-sm uppercase tracking-widest text-emerald">{lang === 'en' ? 'â€” Section 02 Â· Process' : 'â€” BÃ¶lÃ¼m 02 Â· SÃ¼reÃ§'}</p>
+          <h2 className="mt-4 font-heading text-5xl font-bold tracking-tight text-navy md:text-6xl">
+            NasÄ±l abone <span className="font-serif italic text-gradient">olurum?</span>
+          </h2>
+          <p className="mt-4 text-lg text-slate">{lang === 'en' ? 'Six elegant steps â€” with the discipline of a chronograph second hand.' : 'AltÄ± zarif adÄ±mda â€” bir kronograf yelkovanÄ±nÄ±n disiplini ile.'}</p>
+        </div>
+
+        {/* Tabs */}
+        <div className="mx-auto mt-10 flex max-w-3xl flex-wrap justify-center gap-2">
+          {(lang === 'en' ? TABS_EN : TABS_TR).map((t, i) => (
+            <button key={t} onClick={()=>setTab(i)} className={`rounded-lg border-2 px-5 py-3 font-mono text-sm font-bold uppercase tracking-widest transition-all ${tab===i?'border-navy bg-navy text-white':'border-slate-200 bg-white text-navy hover:border-navy/30'}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {/* Step indicator */}
+        <div className="mx-auto mt-12 max-w-5xl">
+          <div className="relative flex items-center justify-between">
+            <div className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-slate-200"/>
+            <div className="absolute left-0 top-1/2 h-0.5 -translate-y-1/2 bg-emerald transition-all duration-500" style={{width:`${((step-1)/(STEPS.length-1))*100}%`}}/>
+            {STEPS.map((s: {n:number;title:string;sub:string;desc:string;docs:string[]})=>(
+              <button key={s.n} onClick={()=>setStep(s.n)} className="relative z-10 flex flex-col items-center">
+                <span className={`flex h-16 w-16 items-center justify-center rounded-full border-4 font-serif text-2xl font-light transition-all ${step>=s.n?'border-emerald bg-white text-navy':'border-slate-200 bg-white text-slate'} ${step===s.n?'scale-110 shadow-xl shadow-emerald/30 ring-4 ring-emerald/20':''}`}>
+                  {s.n}
+                </span>
+                <p className="mt-3 font-mono text-[11px] font-bold uppercase tracking-widest text-slate">{lang === 'en' ? 'Step' : 'AdÄ±m'} {s.n}</p>
+                <p className="mt-1 font-serif text-base italic text-navy">{s.title}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Form panel */}
+        <div className="mx-auto mt-14 max-w-6xl rounded-[2.5rem] border-2 border-slate-200 bg-white p-8 shadow-2xl shadow-sky-deep/10 md:p-12">
+          <div className="grid gap-10 md:grid-cols-2">
+            <div>
+              <p className="font-mono text-xs font-bold uppercase tracking-widest text-emerald">{lang === 'en' ? 'Step' : 'AdÄ±m'} {cur.n} Â· {(lang === 'en' ? TABS_EN : TABS_TR)[tab]}</p>
+              <h3 className="mt-3 font-serif text-4xl font-light italic text-navy">{cur.title}</h3>
+              <p className="mt-4 text-lg leading-relaxed text-slate">{cur.desc}</p>
+              <ul className="mt-6 space-y-3">
+                {cur.docs.map((d: string)=>(
+                  <li key={d} className="flex items-center gap-3 font-serif text-base italic text-navy">
+                    <span className="h-2 w-2 rounded-full bg-emerald"/> {d}
+                  </li>
+                ))}
+              </ul>
+
+              {/* Tip seÃ§imi */}
+              <div className="mt-8">
+                <label className="mb-3 block font-mono text-xs font-bold uppercase tracking-widest text-slate">{lang === 'en' ? 'APPLICATION TYPE' : 'BAÅVURU TÄ°PÄ°'}</label>
+                <div className="flex flex-wrap gap-3">
+                  {(lang === 'en' ? ['Property Owner','Tenant','Foreign National'] : ['MÃ¼lk Sahibi','KiracÄ±','YabancÄ± Uyruklu']).map(o=>(
+                    <label key={o} className={`cursor-pointer rounded-xl border-2 px-5 py-3 text-base font-semibold transition-all ${tip===o?'border-emerald bg-emerald/10 text-navy':'border-slate-200 bg-white text-slate hover:border-slate-300'}`}>
+                      <input type="radio" name="tip" checked={tip===o} onChange={()=>setTip(o)} className="sr-only"/>
+                      {o}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-widest text-slate">{lang === 'en' ? 'PHONE' : 'TELEFON'}</label>
+                <input value={tel} onChange={(e)=>setTel(e.target.value)} placeholder="+90 5xx xxx xx xx"
+                  className={`w-full rounded-xl border-2 px-5 py-4 text-lg text-navy outline-none transition-colors ${tel && !okTel ? 'border-red-500' : okTel ? 'border-emerald' : 'border-slate-200 focus:border-sky-deep'}`}/>
+                {tel && !okTel && <p className="mt-2 flex items-center gap-1.5 text-sm text-red-600"><AlertCircle size={14}/> GeÃ§erli bir telefon girin.</p>}
+              </div>
+              <div>
+                <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-widest text-slate">{lang === 'en' ? 'ID NUMBER' : 'T.C. KÄ°MLÄ°K'}</label>
+                <input value={tc} onChange={(e)=>setTc(e.target.value.replace(/\D/g,'').slice(0,11))} placeholder={lang === "en" ? "11 digits" : "11 haneli"}
+                  className={`w-full rounded-xl border-2 px-5 py-4 text-lg text-navy outline-none transition-colors ${tc && !okTc ? 'border-red-500' : okTc ? 'border-emerald' : 'border-slate-200 focus:border-sky-deep'}`}/>
+                {tc && !okTc && <p className="mt-2 flex items-center gap-1.5 text-sm text-red-600"><AlertCircle size={14}/> GeÃ§erli T.C. kimlik girin.</p>}
+              </div>
+              <div>
+                <label className="mb-2 block font-mono text-xs font-bold uppercase tracking-widest text-slate">{lang === 'en' ? 'SERVICE ADDRESS' : 'HÄ°ZMET ADRESÄ°'}</label>
+                <textarea value={adres} onChange={(e)=>setAdres(e.target.value)} rows={3} placeholder="Mahalle, sokak, kapÄ± no"
+                  className="w-full rounded-xl border-2 border-slate-200 px-5 py-4 text-lg text-navy outline-none focus:border-sky-deep"/>
+              </div>
+              {valid && <p className="flex items-center gap-2 rounded-xl bg-emerald/10 px-4 py-3 text-base font-semibold text-emerald"><CheckCircle2 size={18}/> Bilgileriniz doÄŸrulandÄ±.</p>}
+
+              <div className="flex items-center justify-between border-t border-slate-200 pt-6">
+                <button onClick={()=>setStep(Math.max(1,step-1))} disabled={step===1} className="inline-flex items-center gap-2 font-mono text-sm font-bold uppercase tracking-widest text-slate disabled:opacity-40 hover:text-navy">
+                  <ArrowLeft size={16}/> Ã–nceki
+                </button>
+                <span className="font-serif text-sm italic text-slate">{step} / {STEPS.length}</span>
+                <button onClick={()=>setStep(Math.min(STEPS.length,step+1))} disabled={!valid && step < STEPS.length}
+                  className={`inline-flex items-center gap-2 rounded-xl px-6 py-3 font-mono text-sm font-bold uppercase tracking-widest transition-all ${valid || step===STEPS.length ? 'bg-emerald text-white hover:bg-emerald-glow' : 'cursor-not-allowed bg-slate-200 text-slate'}`}>
+                  {step===STEPS.length?(lang === 'en' ? 'Complete' : 'Tamamla'):(lang === 'en' ? 'Next' : 'Ä°lerle')} <ArrowRight size={16}/>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+
+===== site-footer.tsx =====
+// src/components/site-footer.tsx
+import { useEffect, useState } from 'react'
+import { MapPin, Lock, Phone, AlertTriangle, ExternalLink, Download } from 'lucide-react'
+import { api, type FooterCol, type FooterLink, type FooterServiceLink, type Settings } from '../lib/api'
+import logoAsset from '../assets/izmirgaz-logo.png.asset.json'
+import * as Icons from 'lucide-react'
+
+function DynamicIcon({ name, size = 22 }: { name: string; size?: number }) {
+  const Icon = (Icons as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[name]
+  if (!Icon) return null
+  return <Icon size={size} />
+}
+
+export function SiteFooter() {
+  const [cols, setCols] = useState<FooterCol[]>([])
+  const [links, setLinks] = useState<FooterLink[]>([])
+  const [serviceLinks, setServiceLinks] = useState<FooterServiceLink[]>([])
+  const [settings, setSettings] = useState<Settings>({})
+
+  useEffect(() => {
+    api.getFooter().then(({ cols, links, serviceLinks }) => {
+      setCols(cols)
+      setLinks(links)
+      setServiceLinks(serviceLinks)
+    }).catch(() => {})
+    api.getSettings().then(setSettings).catch(() => {})
+  }, [])
+
+  const callCenter = settings['call_center'] || '0850 222 3335'
+  const address = settings['address'] || 'Ä°zmir, TÃ¼rkiye'
+  const appBtn = settings['footer_app_btn'] || 'Ä°zmirGaz Mobili Ä°ndir'
+  const copyright = settings['footer_copyright'] || `Â© ${new Date().getFullYear()} Ä°zmirGaz. TÃ¼m haklarÄ± saklÄ±dÄ±r.`
+
+  return (
+    <footer id="footer" className="relative overflow-hidden bg-gradient-to-br from-sky-deep via-[#3aa8ce] to-sky text-white">
+      {/* SarÄ± servis bar */}
+      <div className="relative bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-navy">
+        <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-x-10 gap-y-6 px-10 py-14 xl:px-20 xl:py-16">
+          <a href="#" className="group flex items-center gap-3 rounded-full bg-navy/95 px-8 py-5 text-lg font-extrabold text-amber-300 shadow-xl transition-transform hover:scale-105">
+            <Download size={22} /> {appBtn}
+          </a>
+          <div className="flex flex-wrap items-center gap-x-10 gap-y-5">
+            {serviceLinks.map((sl) => (
+              <a key={sl.id} href={sl.href || '#'} className="group flex items-center gap-3 text-[18px] font-extrabold text-navy/90 transition-colors hover:text-navy">
+                <span className="grid h-14 w-14 place-items-center rounded-full bg-white/80 ring-2 ring-navy/10 shadow-sm group-hover:bg-white group-hover:ring-navy/25">
+                  <DynamicIcon name={sl.icon} size={26} />
+                </span>
+                <span className="leading-tight">{sl.label}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="relative w-full px-10 py-32 xl:px-20">
+        <div className="grid gap-12 lg:grid-cols-[1.2fr_repeat(5,1fr)]">
+          <div className="flex flex-col items-center text-center">
+            <span className="inline-flex items-center justify-center rounded-3xl bg-white p-6 shadow-2xl ring-1 ring-white/40 transition-transform hover:scale-105">
+              <img src={logoAsset.url} alt="Ä°zmirGaz â€” DoÄŸal Gaz UygarlÄ±ÄŸÄ±" className="h-28 w-auto object-contain md:h-32" />
+            </span>
+            <p className="mt-5 text-lg leading-relaxed text-white/90">DoÄŸal Gaz UygarlÄ±ÄŸÄ± â€” Ä°zmir'in enerjisini gÃ¼venle ve kesintisiz yÃ¶netiyoruz.</p>
+            <a href="https://www.turkiye.gov.tr" target="_blank" rel="noreferrer"
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-sky-deep shadow-lg hover:shadow-xl">
+              <ExternalLink size={16} /> e-Devlet GiriÅŸi
+            </a>
+          </div>
+
+          {cols.map((col) => (
+            <div key={col.id}>
+              <button type="button" className="inline-flex w-full items-center justify-between rounded-full bg-white/15 px-5 py-3 text-base font-extrabold uppercase tracking-wide text-white shadow-md ring-1 ring-white/20 backdrop-blur transition hover:bg-white hover:text-sky-deep">
+                {col.title}
+              </button>
+              <ul className="mt-5 space-y-3 pl-2">
+                {links.filter(l => l.col_id === col.id).map((l) => (
+                  <li key={l.id}>
+                    <a href={l.href || '#'} className="block text-[16px] leading-snug text-white/90 transition-colors hover:text-white hover:underline">
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-14 grid gap-10 rounded-2xl bg-white/12 p-8 backdrop-blur-sm md:grid-cols-4 md:gap-16 md:px-12">
+          <div className="flex items-center gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20"><MapPin size={22} /></span>
+            <div><p className="text-sm text-white/80">Genel MÃ¼dÃ¼rlÃ¼k</p><p className="text-lg font-semibold">{address}</p></div>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20"><MapPin size={22} /></span>
+            <div><p className="text-sm text-white/80">Abone Merkezleri</p><p className="text-lg font-semibold">11 Ä°lÃ§e</p></div>
+          </div>
+          <a href={`tel:${callCenter.replace(/\s/g, '')}`} className="flex items-center gap-4 rounded-xl transition-colors hover:bg-white/10">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/20"><Phone size={22} /></span>
+            <div><p className="text-sm text-white/80">Ã‡aÄŸrÄ± Merkezi</p><p className="font-mono text-xl font-bold">{callCenter}</p></div>
+          </a>
+          <a href="tel:187" className="flex items-center gap-4 rounded-xl transition-colors hover:bg-red-500/20">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red-500/30 animate-pulse"><AlertTriangle size={22} /></span>
+            <div><p className="text-sm text-white/80">DoÄŸal Gaz Acil</p><p className="font-mono text-2xl font-extrabold">187</p></div>
+          </a>
+        </div>
+
+        <div className="mt-10 flex flex-col gap-4 border-t border-white/25 pt-6 md:flex-row md:items-center md:justify-between md:px-6">
+          <div className="flex flex-wrap items-center gap-8">
+            {['KVKK', 'EPDK', 'ISO 9001', 'ISO 27001'].map(l => (
+              <span key={l} className="inline-flex items-center gap-2 font-mono text-sm font-semibold text-white/90"><Lock size={13} /> {l}</span>
+            ))}
+          </div>
+          <p className="font-mono text-sm text-white/80">{copyright}</p>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+
+===== sticky-bar.tsx =====
+// src/components/sticky-bar.tsx
+import { useEffect, useState } from 'react'
+import { useI18n } from '../lib/i18n'
+import { X } from 'lucide-react'
+import { api, type StickyItem, type Settings } from '../lib/api'
+import * as Icons from 'lucide-react'
+
+function DynIcon({ name, size = 16 }: { name: string; size?: number }) {
+  const Icon = (Icons as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[name]
+  if (!Icon) return null
+  return <Icon size={size} className="shrink-0" />
+}
+
+export function StickyBar() {
+  const { lang } = useI18n()
+  const [items, setItems] = useState<StickyItem[]>([])
+  const [settings, setSettings] = useState<Settings>({})
+  const [open, setOpen] = useState(false)
+  const [show, setShow] = useState(false)
+
+  useEffect(() => {
+    api.getSticky().then(setItems).catch(() => {})
+    api.getSettings().then(setSettings).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > window.innerHeight * 0.9)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => { if (show) setOpen(true) }, [show])
+
+  if (!show || !open || settings['sticky_bar_active'] === 'false') return null
+
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-4 sm:pb-4">
+      <div className="mx-auto flex max-w-5xl items-center gap-2 overflow-x-auto rounded-2xl bg-gradient-to-r from-emerald to-sky p-2 shadow-2xl shadow-emerald/30 backdrop-blur sm:gap-3 sm:p-2.5">
+        <div className="flex flex-1 items-center gap-2 sm:gap-3">
+          {items.map((it) => (
+            <a key={it.id} href={it.href || '#'}
+              className="magnetic-btn flex shrink-0 items-center gap-2 rounded-xl bg-white/15 px-3 py-2 text-xs font-semibold text-white backdrop-blur-sm transition-colors hover:bg-white/25 sm:text-sm">
+              <DynIcon name={it.icon} size={16} />
+              <span className="whitespace-nowrap">{lang === 'en' ? ((it as any).label_en || it.label) : it.label}</span>
+            </a>
+          ))}
+        </div>
+        <button onClick={() => setOpen(false)} aria-label="Åeridi kapat"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white transition-colors hover:bg-white/30">
+          <X size={16} />
+        </button>
+      </div>
+    </div>
+  )
+}
+
+
+===== kvkk-banner.tsx =====
+// src/components/kvkk-banner.tsx
+import { useEffect, useState } from 'react'
+import { Cookie } from 'lucide-react'
+import { api, type Settings } from '../lib/api'
+
+export function KvkkBanner() {
+  const [visible, setVisible] = useState(false)
+  const [settings, setSettings] = useState<Settings>({})
+
+  useEffect(() => {
+    api.getSettings().then(setSettings).catch(() => {})
+    try {
+      if (!localStorage.getItem('izg-kvkk')) {
+        const t = setTimeout(() => setVisible(true), 1200)
+        return () => clearTimeout(t)
+      }
+    } catch {}
+  }, [])
+
+  const accept = () => {
+    try { localStorage.setItem('izg-kvkk', '1') } catch {}
+    setVisible(false)
+  }
+
+  if (!visible || settings['kvkk_active'] === 'false') return null
+
+  return (
+    <div className="fixed bottom-4 left-4 z-[55] w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-border bg-card p-5 shadow-2xl">
+      <div className="flex items-start gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald/12 text-emerald">
+          <Cookie size={18} />
+        </span>
+        <div>
+          <h4 className="text-sm font-bold text-foreground">
+            {settings['kvkk_title'] || 'Ã‡erez ve KVKK Bildirimi'}
+          </h4>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            {settings['kvkk_text'] || 'Deneyiminizi iyileÅŸtirmek iÃ§in Ã§erezler kullanÄ±yoruz.'}
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-2">
+        <button onClick={accept} className="magnetic-btn flex-1 rounded-xl bg-gradient-to-r from-emerald to-sky py-2.5 text-xs font-semibold text-night">
+          Kabul Et
+        </button>
+        <a href="#" className="rounded-xl border border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground">
+          Detaylar
+        </a>
+      </div>
+    </div>
+  )
+}
+
+
+===== ai-chatbox.tsx =====
+import { useState, useEffect } from 'react'
+import { Sparkles, X, Send, Bot } from 'lucide-react'
+import { useI18n } from '../lib/i18n'
+
+const API = 'http://localhost:5001'
+
+interface QA {
+  id: number
+  question: string
+  answer: string
+  question_en?: string
+  answer_en?: string
+}
+
+export function AIChatbox() {
+  const [open, setOpen] = useState(false)
+  const [msgs, setMsgs] = useState<{ r: 'bot' | 'me'; t: string }[]>([])
+  const [input, setInput] = useState('')
+  const [qa, setQA] = useState<QA[]>([])
+  const { lang } = useI18n()
+
+  useEffect(() => {
+    fetch(`${API}/api/chatbox`)
+      .then(r => r.json())
+      .then(setQA)
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const welcome = lang === 'en'
+      ? 'Hello! I am IzmirGaz AI Assistant. How can I help you?'
+      : 'Merhaba! Ben Ä°zmirGaz Yapay ZekÃ¢ AsistanÄ±. Size nasÄ±l yardÄ±mcÄ± olabilirim?'
+    setMsgs([{ r: 'bot', t: welcome }])
+  }, [lang])
+
+  const getQ = (item: QA) => lang === 'en' ? (item.question_en || item.question) : item.question
+  const getA = (item: QA) => lang === 'en' ? (item.answer_en || item.answer) : item.answer
+
+  const send = (text: string) => {
+    if (!text.trim()) return
+    setMsgs(m => [...m, { r: 'me', t: text }])
+    setInput('')
+    // DB'den eÅŸleÅŸen soru bul
+    const norm = (s: string) => s.toLowerCase().trim()
+    const match = qa.find(q => norm(getQ(q)).includes(norm(text)) || norm(text).includes(norm(getQ(q)).substring(0, 10)))
+    setTimeout(() => {
+      if (match) {
+        setMsgs(m => [...m, { r: 'bot', t: getA(match) }])
+      } else {
+        const fallback = lang === 'en'
+          ? 'I have forwarded your request. For emergencies call 187.'
+          : 'Talebinizi aldÄ±m, en yakÄ±n temsilcimiz yÃ¶nlendirilecek. Acil iÃ§in 187.'
+        setMsgs(m => [...m, { r: 'bot', t: fallback }])
+      }
+    }, 600)
+  }
+
+  const QUICK = qa.slice(0, 4).map(q => getQ(q))
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="ai-ring fixed bottom-24 right-5 z-40 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-sky to-sky-deep text-white shadow-2xl shadow-sky-deep/40 transition-transform hover:scale-110"
+        aria-label="Yapay ZekÃ¢ AsistanÄ±"
+      >
+        <Sparkles size={26}/>
+      </button>
+    )
+  }
+
+  return (
+    <div className="fixed bottom-24 right-5 z-50 w-[360px] max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-3xl border-2 border-sky/40 bg-white shadow-2xl shadow-sky-deep/30 animate-in fade-in slide-in-from-bottom-5">
+      <div className="flex items-center justify-between bg-gradient-to-r from-sky-deep to-sky px-5 py-4 text-white">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20"><Bot size={20}/></span>
+          <div>
+            <p className="text-base font-bold">{lang === 'en' ? 'IzmirGaz AI Assistant' : 'Ä°zmirGaz AI AsistanÄ±'}</p>
+            <p className="text-xs text-white/80">{lang === 'en' ? 'Online Â· 24/7' : 'Ã‡evrimiÃ§i Â· 7/24'}</p>
+          </div>
+        </div>
+        <button onClick={() => setOpen(false)} aria-label="Kapat" className="rounded-full p-2 hover:bg-white/15"><X size={18}/></button>
+      </div>
+
+      <div className="max-h-80 space-y-3 overflow-y-auto bg-mist p-4">
+        {msgs.map((m, i) => (
+          <div key={i} className={`flex ${m.r === 'me' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${m.r === 'me' ? 'bg-sky-deep text-white' : 'bg-white text-navy shadow-sm'}`}>{m.t}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-slate-200 bg-white p-3">
+        {QUICK.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {QUICK.map((q) => (
+              <button key={q} onClick={() => send(q)} className="rounded-full border border-sky/40 px-3 py-1 text-xs font-semibold text-sky-deep hover:bg-sky/10">{q}</button>
+            ))}
+          </div>
+        )}
+        <form onSubmit={(e) => { e.preventDefault(); send(input) }} className="flex items-center gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={lang === 'en' ? 'Type your questionâ€¦' : 'Sorunuzu yazÄ±nâ€¦'}
+            className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-base text-navy outline-none focus:border-sky-deep"
+          />
+          <button type="submit" className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-sky to-sky-deep text-white hover:from-sky-deep hover:to-sky-deep"><Send size={18}/></button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+
+===== videos.tsx =====
+// src/components/videos.tsx
+import { useEffect, useState } from 'react'
+import { Film } from 'lucide-react'
+import { api, type Settings } from '../lib/api'
+
+export function Videos() {
+  const [settings, setSettings] = useState<Settings>({})
+
+  useEffect(() => {
+    api.getSettings().then(setSettings).catch(() => {})
+  }, [])
+
+  const videoUrl = settings['video_url'] || ''
+  const videoTitle = settings['video_title'] || "Ä°zmir'in enerjisi,"
+  const videoSubtitle = settings['video_subtitle'] || 'hareket halinde.'
+
+  if (!videoUrl) return null
+
+  return (
+    <section id="videos" className="mx-auto max-w-7xl px-6 py-24 md:py-28">
+      <div className="mb-10">
+        <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-widest text-emerald">
+          <Film size={14} /> Kurumsal Film
+        </span>
+        <h2 className="mt-3 font-heading text-4xl font-bold tracking-tight text-navy md:text-5xl">
+          {videoTitle} <span className="font-serif italic text-gradient">{videoSubtitle}</span>
+        </h2>
+      </div>
+      <div className="relative overflow-hidden rounded-[2.5rem] border border-sky/30 bg-navy shadow-2xl shadow-sky-deep/30">
+        <video
+          src={videoUrl}
+          className="block aspect-video w-full object-cover"
+          controls
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+        />
+      </div>
+    </section>
+  )
+}
+
+
+===== hero-carousel.tsx =====
+// src/components/hero-carousel.tsx
+import { useEffect, useRef, useState } from 'react'
+import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
+import { api, type Slide } from '../lib/api'
+
+const DEFAULT_SLIDES: Slide[] = [
+  { id: 1, tag: 'Ä°zmir', title: "Ä°zmir'in enerjisi,", subtitle: 'gÃ¼vencesi.', image_url: '/banner-1.png', href: '#', order_no: 0, is_active: 1 },
+]
+
+export function HeroCarousel() {
+  const [slides, setSlides] = useState<Slide[]>(DEFAULT_SLIDES)
+  const [i, setI] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const timer = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    api.getSlides().then(setSlides).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (paused || slides.length === 0) return
+    timer.current = setInterval(() => setI((p) => (p + 1) % slides.length), 5000)
+    return () => { if (timer.current) clearInterval(timer.current) }
+  }, [paused, slides.length])
+
+  const go = (d: number) => setI((p) => (p + d + slides.length) % slides.length)
+
+  return (
+    <div className="relative overflow-hidden rounded-[2.5rem] border border-sky/30 bg-navy shadow-2xl shadow-sky-deep/30">
+      <div className="relative aspect-[21/9] w-full">
+        {slides.map((s, idx) => (
+          <div
+            key={s.id}
+            className={`absolute inset-0 transition-opacity duration-1000 ${idx === i ? 'opacity-100' : 'opacity-0'}`}
+          >
+            <img src={s.image_url} alt={s.title} className="h-full w-full object-cover" />
+            <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-navy via-navy/90 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-navy/85 via-navy/30 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
+              <span className="inline-block rounded-full bg-emerald/90 px-4 py-1.5 text-sm font-bold uppercase tracking-widest text-white">
+                {s.tag}
+              </span>
+              <h3 className="mt-4 font-heading text-3xl font-extrabold leading-tight text-white md:text-5xl">
+                {s.title} <span className="font-serif italic text-sky-soft">{s.subtitle}</span>
+              </h3>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={() => go(-1)} aria-label="Ã–nceki" className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-navy shadow-lg hover:bg-white">
+        <ChevronLeft size={22} />
+      </button>
+      <button onClick={() => go(1)} aria-label="Sonraki" className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-navy shadow-lg hover:bg-white">
+        <ChevronRight size={22} />
+      </button>
+
+      <div className="absolute bottom-4 right-4 flex items-center gap-2">
+        <button onClick={() => setPaused((v) => !v)} aria-label={paused ? 'Oynat' : 'Duraklat'} className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-navy shadow-lg hover:bg-white">
+          {paused ? <Play size={16} /> : <Pause size={16} />}
+        </button>
+      </div>
+
+      <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2">
+        {slides.map((_, idx) => (
+          <button
+            key={idx}
+            onClick={() => setI(idx)}
+            aria-label={`Slayt ${idx + 1}`}
+            className={`h-2 rounded-full transition-all ${idx === i ? 'w-8 bg-white' : 'w-2 bg-white/50'}`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+
+
