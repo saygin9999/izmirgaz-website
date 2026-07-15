@@ -8,7 +8,7 @@ const DEFAULT_SLIDES: Slide[] = [
   { id: 1, tag: 'Ä°zmir', title: "Ä°zmir'in enerjisi,", subtitle: 'gÃ¼vencesi.', image_url: '/banner-1.png', href: '#', order_no: 0, is_active: 1 },
 ]
 
-export function HeroCarousel() {
+export function HeroCarousel({ className }: { className?: string }) {
   const { lang } = useI18n()
   const [slides, setSlides] = useState<Slide[]>(DEFAULT_SLIDES)
   const [i, setI] = useState(0)

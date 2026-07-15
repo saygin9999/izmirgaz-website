@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { Smartphone, X, Apple, Play } from 'lucide-react'
 
-export function SideWidget() {
+export function SideWidget({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
 
   return (

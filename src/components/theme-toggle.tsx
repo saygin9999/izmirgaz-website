@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 
-export function ThemeToggle() {
+export function ThemeToggle({ className }: { className?: string }) {
   const [dark, setDark] = useState(false)
   useEffect(() => {
     const saved = localStorage.getItem('izg-theme')

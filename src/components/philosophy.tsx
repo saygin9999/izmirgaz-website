@@ -7,7 +7,7 @@ import { api, type Settings } from '../lib/api'
 
 gsap.registerPlugin(ScrollTrigger)
 
-export function Philosophy() {
+export function Philosophy({ className }: { className?: string }) {
   const { lang } = useI18n()
   const root = useRef<HTMLElement>(null)
   const [settings, setSettings] = useState<Settings>({})

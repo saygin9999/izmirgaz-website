@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Cookie } from 'lucide-react'
 import { api, type Settings } from '../lib/api'
 
-export function KvkkBanner() {
+export function KvkkBanner({ className }: { className?: string }) {
   const [visible, setVisible] = useState(false)
   const [settings, setSettings] = useState<Settings>({})
 

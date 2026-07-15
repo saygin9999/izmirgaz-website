@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { Film } from 'lucide-react'
 import { api, type Settings } from '../lib/api'
 
-export function Videos() {
+export function Videos({ className }: { className?: string }) {
   const [settings, setSettings] = useState<Settings>({})
 
   useEffect(() => {

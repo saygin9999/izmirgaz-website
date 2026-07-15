@@ -10,7 +10,7 @@ const STATS = [
   { value: '7/24', label: 'Acil Hat 187' },
 ]
 
-export function Hero() {
+export function Hero({ className }: { className?: string }) {
   const { t } = useI18n()
   const root = useRef<HTMLElement>(null)
   const field = useRef<HTMLDivElement>(null)

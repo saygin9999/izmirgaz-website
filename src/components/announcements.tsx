@@ -8,7 +8,7 @@ import { useI18n } from '../lib/i18n'
 
 gsap.registerPlugin(ScrollTrigger)
 
-export function Announcements() {
+export function Announcements({ className }: { className?: string }) {
   const { t } = useI18n()
   const root = useRef<HTMLElement>(null)
   const [news, setNews] = useState<NewsItem[]>([])

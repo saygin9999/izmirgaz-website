@@ -182,7 +182,7 @@ function PanelTalep({ onClose }: { onClose: () => void }) {
   )
 }
 
-export function Features() {
+export function Features({ className }: { className?: string }) {
   const root = useRef<HTMLElement>(null)
   const [open, setOpen] = useState<CardKey | null>(null)
   const { lang } = useI18n()

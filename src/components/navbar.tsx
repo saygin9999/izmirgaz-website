@@ -66,7 +66,7 @@ const SITE_PAGES = [
 ];
 
 
-export function Navbar() {
+export function Navbar({ className }: { className?: string }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const { lang, setLang, t } = useI18n()

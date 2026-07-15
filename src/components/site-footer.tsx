@@ -13,7 +13,7 @@ function DynamicIcon({ name, size = 22 }: { name: string; size?: number }) {
   return <Icon size={size} />
 }
 
-export function SiteFooter() {
+export function SiteFooter({ className }: { className?: string }) {
   const { t, lang } = useI18n()
   const [cols, setCols] = useState<FooterCol[]>([])
   const [links, setLinks] = useState<FooterLink[]>([])

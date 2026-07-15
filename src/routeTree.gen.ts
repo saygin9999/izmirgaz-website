@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PlasmicHostRouteImport } from './routes/plasmic-host'
 import { Route as MusteriHizmetleriRouteImport } from './routes/musteri-hizmetleri'
 import { Route as KurumsalRouteImport } from './routes/kurumsal'
 import { Route as BizeUlasinRouteImport } from './routes/bize-ulasin'
@@ -22,6 +23,11 @@ import { Route as KurumsalHakkimizdaRouteImport } from './routes/kurumsal.hakkim
 import { Route as KurumsalBilgiToplumuRouteImport } from './routes/kurumsal.bilgi-toplumu'
 import { Route as KurumsalBasinOdasiRouteImport } from './routes/kurumsal.basin-odasi'
 
+const PlasmicHostRoute = PlasmicHostRouteImport.update({
+  id: '/plasmic-host',
+  path: '/plasmic-host',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MusteriHizmetleriRoute = MusteriHizmetleriRouteImport.update({
   id: '/musteri-hizmetleri',
   path: '/musteri-hizmetleri',
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/bize-ulasin': typeof BizeUlasinRoute
   '/kurumsal': typeof KurumsalRouteWithChildren
   '/musteri-hizmetleri': typeof MusteriHizmetleriRoute
+  '/plasmic-host': typeof PlasmicHostRoute
   '/kurumsal/basin-odasi': typeof KurumsalBasinOdasiRoute
   '/kurumsal/bilgi-toplumu': typeof KurumsalBilgiToplumuRoute
   '/kurumsal/hakkimizda': typeof KurumsalHakkimizdaRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/bize-ulasin': typeof BizeUlasinRoute
   '/kurumsal': typeof KurumsalRouteWithChildren
   '/musteri-hizmetleri': typeof MusteriHizmetleriRoute
+  '/plasmic-host': typeof PlasmicHostRoute
   '/kurumsal/basin-odasi': typeof KurumsalBasinOdasiRoute
   '/kurumsal/bilgi-toplumu': typeof KurumsalBilgiToplumuRoute
   '/kurumsal/hakkimizda': typeof KurumsalHakkimizdaRoute
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/bize-ulasin': typeof BizeUlasinRoute
   '/kurumsal': typeof KurumsalRouteWithChildren
   '/musteri-hizmetleri': typeof MusteriHizmetleriRoute
+  '/plasmic-host': typeof PlasmicHostRoute
   '/kurumsal/basin-odasi': typeof KurumsalBasinOdasiRoute
   '/kurumsal/bilgi-toplumu': typeof KurumsalBilgiToplumuRoute
   '/kurumsal/hakkimizda': typeof KurumsalHakkimizdaRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/bize-ulasin'
     | '/kurumsal'
     | '/musteri-hizmetleri'
+    | '/plasmic-host'
     | '/kurumsal/basin-odasi'
     | '/kurumsal/bilgi-toplumu'
     | '/kurumsal/hakkimizda'
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/bize-ulasin'
     | '/kurumsal'
     | '/musteri-hizmetleri'
+    | '/plasmic-host'
     | '/kurumsal/basin-odasi'
     | '/kurumsal/bilgi-toplumu'
     | '/kurumsal/hakkimizda'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/bize-ulasin'
     | '/kurumsal'
     | '/musteri-hizmetleri'
+    | '/plasmic-host'
     | '/kurumsal/basin-odasi'
     | '/kurumsal/bilgi-toplumu'
     | '/kurumsal/hakkimizda'
@@ -177,10 +189,18 @@ export interface RootRouteChildren {
   BizeUlasinRoute: typeof BizeUlasinRoute
   KurumsalRoute: typeof KurumsalRouteWithChildren
   MusteriHizmetleriRoute: typeof MusteriHizmetleriRoute
+  PlasmicHostRoute: typeof PlasmicHostRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/plasmic-host': {
+      id: '/plasmic-host'
+      path: '/plasmic-host'
+      fullPath: '/plasmic-host'
+      preLoaderRoute: typeof PlasmicHostRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/musteri-hizmetleri': {
       id: '/musteri-hizmetleri'
       path: '/musteri-hizmetleri'
@@ -298,6 +318,7 @@ const rootRouteChildren: RootRouteChildren = {
   BizeUlasinRoute: BizeUlasinRoute,
   KurumsalRoute: KurumsalRouteWithChildren,
   MusteriHizmetleriRoute: MusteriHizmetleriRoute,
+  PlasmicHostRoute: PlasmicHostRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

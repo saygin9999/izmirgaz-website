@@ -12,7 +12,7 @@ interface QA {
   answer_en?: string
 }
 
-export function Chatbox() {
+export function Chatbox({ className }: { className?: string }) {
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([
     { r: 'bot', t: 'Merhaba! 👋 İzmirGaz AI Asistanı. Türkçe veya İngilizce sorabilirsiniz.' }

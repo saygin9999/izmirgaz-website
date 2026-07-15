@@ -78,7 +78,7 @@ const STEPS_BY_TAB: Record<number, { n: number; title: string; sub: string; desc
 function reTC(v: string) { return /^[1-9][0-9]{10}$/.test(v) }
 function reTel(v: string) { return /^(\+90|0)?5[0-9]{9}$/.test(v.replace(/\s/g, '')) }
 
-export function Protocol() {
+export function Protocol({ className }: { className?: string }) {
   const { lang } = useI18n()
   const [tab, setTab] = useState(0)
   const [step, setStep] = useState(1)
